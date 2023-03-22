@@ -1,47 +1,224 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jogo Ping-Pong</title>
-    <style>
-      * {
-        overflow: hidden;
-        margin: 0;
-        padding: 0;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jogo Ping-Pong</title>
+  <style>
+    * {
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas></canvas>
+  <script>
+    const canvasEl = document.querySelector("canvas"),
+      canvasCtx = canvasEl.getContext("2d"),
+      lineWidth = 15,
+      gapX = 2
+
+    const mouse = { x: 0, y: 0 }
+    const GameResume = { status: 'Start' }
+    const field = {
+      w: window.innerWidth,
+      h: window.innerHeight,
+      draw: function () {
+        canvasCtx.fillStyle = '#286047'
+        canvasCtx.fillRect(0, 0, this.w, this.h)
       }
-    </style>
-  </head>
-  <body>
-    <canvas></canvas>
-    <script>
-      const canvasEl = document.querySelector("canvas"),
-        canvasCtx = canvasEl.getContext("2d")
+    }
 
-      const lineWidth = 15
-
-      function setup() {
-        canvasEl.width = canvasCtx.width = window.innerWidth
-        canvasEl.height = canvasCtx.height = window.innerHeight
+    const lineMid = {
+      w: 15,
+      h: field.h,
+      draw: function () {
+        canvasCtx.fillStyle = '#ffffff'
+        canvasCtx.fillRect(field.w / 2 - this.w / 2, 0, this.w, this.h)
       }
+    }
 
-      function draw() {
-        canvasCtx.fillStyle = "#286047"
-        canvasCtx.fillRect(0, 0, window.innerWidth, window.innerHeight)
 
+    const leftPaddle = {
+      x: gapX,
+      y: 100,
+      w: lineMid.w,
+      h: 200,
+      _move: function () {
+        this.y = mouse.y - this.h / 2
+      },
+      draw: function () {
+        canvasCtx.fillStyle = '#ffffff'
+        canvasCtx.fillRect(this.x, this.y, this.w, this.h)
+        if (GameResume.status == 'Game') {
+          this._move()
+        }
+      }
+    }
+
+    const rightPaddle = {
+      x: window.innerWidth - lineWidth - gapX,
+      y: 400,
+      w: lineWidth,
+      h: 200,
+      _move: function () {
+        this.y = ball.y - this.h / 2
+      },
+      draw: function () {
+        canvasCtx.fillStyle = '#ffffff'
+        canvasCtx.fillRect(this.x, this.y, this.w, this.h)
+        if (GameResume.status == 'Game') {
+          this._move()
+        }
+      }
+    }
+
+    const ball = {
+      x: 250,
+      y: 40,
+      r: 20,
+      speed: 2,
+      directionXY: { x: 1, y: 1 },
+      _calcPosition: function () {
+        //Colisão no eixo Y
+        if ((this.y + this.r > field.h) || (this.y < this.r)) {
+          this._reverseXY(1)
+        }
+
+        //colisão com a barra lateral dir. ou com o fundo do campo
+        if (this.x > rightPaddle.x - rightPaddle.w / 2 && this.directionXY.x == 1) {
+          if (this.y > rightPaddle.y && this.y - this.r < rightPaddle.y + rightPaddle.h) {
+            this._reverseXY(0)
+          } else {
+            this.speed = 0
+            score.player_1 += 1
+
+            GameResume.status = 'Start'
+            leftPaddle.y = window.innerHeight / 2 - leftPaddle.h / 2
+
+            this.x = 50
+            this.y = leftPaddle.y + leftPaddle.h / 2
+          }
+        }
+
+        if (this.x < leftPaddle.w + gapX + this.r / 4 && this.directionXY.x == -1) {
+          if (this.y + this.r > leftPaddle.y && this.y - this.r < leftPaddle.y + leftPaddle.h) {
+            this._reverseXY(0)
+          } else {
+            score.player_2 += 1
+            leftPaddle.y = window.innerHeight / 2 - leftPaddle.h / 2
+            this.speed = 0
+            this.x = 50
+            this.y = leftPaddle.y + leftPaddle.h / 2
+            GameResume.status = 'Start'
+          }
+        }
+
+      },
+      _reverseXY: function (bln) {
+        if (bln == 0) {
+          this.directionXY.x = this.directionXY.x * -1
+        } else {
+          this.directionXY.y = this.directionXY.y * -1
+        }
+      },
+      _move: function () {
+        this.x += this.directionXY.x * this.speed
+        this.y += this.directionXY.y * this.speed
+        if (this.speed < 10) {
+          this.speed += 0.001
+        }
+      },
+      draw: function () {
         canvasCtx.fillStyle = "#ffffff"
+        canvasCtx.beginPath()
+        canvasCtx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false)
+        canvasCtx.fill()
 
-        const x = window.innerWidth / 2 - lineWidth / 2
-        const y = 0
-        const w = lineWidth
-        const h = window.innerHeight
+        this._calcPosition()
+        if (GameResume.status == 'Game') {
+          this._move()
+        }
+      },
+    }
 
-        canvasCtx.fillRect(x, y, w, h)
+    const score = {
+      player_1: 1,
+      player_2: 2,
+      y: 50,
+      draw: function () {
+        canvasCtx.font = 'bold 72px arial'
+        canvasCtx.textAlign = 'Center'
+        canvasCtx.textBaseline = 'top'
+        canvasCtx.fillStyle = '#01341D'
+        canvasCtx.fillText(this.player_1, window.innerWidth / 4, this.y)
+        canvasCtx.fillText(this.player_2, window.innerWidth / 4 + window.innerWidth / 2, this.y)
       }
+    }
 
-      setup()
+
+    function setup() {
+      canvasEl.width = canvasCtx.width = field.w
+      canvasEl.height = canvasCtx.height = field.h
+    }
+
+    function draw() {
+      field.draw()
+      lineMid.draw()
+
+      leftPaddle.draw()
+      rightPaddle.draw()
+      score.draw()
+
+      ball.draw()
+    }
+
+
+
+    window.animateFrame = (function () {
+      return (
+        window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function (callback) {
+          return window.setTimeout(callback, 10000)
+        }
+      )
+    }
+    )()
+
+    function main() {
+      animateFrame(main)
       draw()
-    </script>
-  </body>
+    }
+
+    setup()
+    main()
+
+    canvasEl.addEventListener('mousemove', function (e) {
+      mouse.x = e.pageX
+      mouse.y = e.pageY
+    })
+
+    window.onload = function () {
+      canvas = document.getElementById('canvas');
+      document.addEventListener('keydown', function (event) {
+        if (event.keyCode = 32) {
+          GameResume.status = 'Game'
+          ball.speed = 2
+          ball.directionXY.x = 1
+          console.log('Iniciou' + GameResume.status)
+        }
+      }, false);
+    }
+  </script>
+</body>
+
 </html>
